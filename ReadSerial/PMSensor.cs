@@ -1,22 +1,21 @@
 ﻿using System;
 using System.IO.Ports;
 
-namespace Ecorise.Equipment.PMSensor
+namespace Ecorise.Sensor.PMSensor
 {
-    public class PMSensorEventArgs : EventArgs
+    public class NovaSDS011SensorEventArgs : EventArgs
     {
-        public PMSensorEventArgs(double pm25, double pm10) { PM25 = pm25; PM10 = pm10; ; }
+        public NovaSDS011SensorEventArgs(double pm25, double pm10) { PM25 = pm25; PM10 = pm10; ; }
         public double PM25 { get; private set; }
         public double PM10 { get; private set; }
     }
 
-    public class PMSensorDevice : IDisposable
+    public class NovaSDS011SensorDevice : IDisposable
     {
         private SerialPort serialPort;
-        // public delegate void DataReceivedDelegate(object sender, PMSensorEventArgs e);
-        public event EventHandler<PMSensorEventArgs> DataReceived;
+        public event EventHandler<NovaSDS011SensorEventArgs> DataReceived;
 
-        public PMSensorDevice()
+        public NovaSDS011SensorDevice()
         {
             serialPort = null;
         }
@@ -89,7 +88,7 @@ namespace Ecorise.Equipment.PMSensor
 
                         if (checksum == data[8])
                         {
-                            DataReceived?.Invoke(this, new PMSensorEventArgs(pm25, pm10));
+                            DataReceived?.Invoke(this, new NovaSDS011SensorEventArgs(pm25, pm10));
 
                             // Selon http://inovafitness.com/software/SDS011%20laser%20PM2.5%20sensor%20specification-V1.3.pdf
                             // la précision est de +/-15% +/-10μg/m³
@@ -100,7 +99,7 @@ namespace Ecorise.Equipment.PMSensor
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // Pour detecter les appels redondants
+        private bool disposedValue = false;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -108,7 +107,7 @@ namespace Ecorise.Equipment.PMSensor
             {
                 if (disposing)
                 {
-                    serialPort.Dispose();
+                    serialPort?.Close();
                 }
 
                 disposedValue = true;
@@ -118,6 +117,7 @@ namespace Ecorise.Equipment.PMSensor
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

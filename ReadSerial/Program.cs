@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Threading;
-using Ecorise.Equipment.PMSensor;
+using Ecorise.Sensor.PMSensor;
 using Ecorise.Utils;
 
 namespace ReadPMSensor
@@ -15,7 +15,7 @@ namespace ReadPMSensor
 
     public class Program
     {
-        PMSensorDevice pmSensorDevice;
+        NovaSDS011SensorDevice sensorDevice;
 
         private Logger log = new Logger("PM");
         private StringBuilder sbLog = new StringBuilder();
@@ -37,15 +37,15 @@ namespace ReadPMSensor
                 }
                 else if (mode == Mode.Init)
                 {
-                    pmSensorDevice = new PMSensorDevice();
-                    pmSensorDevice.Open(serialInputDeviceComPort);
+                    sensorDevice = new NovaSDS011SensorDevice();
+                    sensorDevice.Open(serialInputDeviceComPort);
 
-                    if (pmSensorDevice.IsOpen)
+                    if (sensorDevice.IsOpen)
                     {
                         Console.WriteLine($"Le port de communication {serialInputDeviceComPort} est ouvert.");
                         Console.WriteLine("");
 
-                        pmSensorDevice.DataReceived += PMSensorDataReceived;
+                        sensorDevice.DataReceived += PMSensorDataReceived;
 
                         mode = Mode.Running;
                     }
@@ -82,8 +82,8 @@ namespace ReadPMSensor
                 Thread.Sleep(100);
             }
 
-            pmSensorDevice.DataReceived -= PMSensorDataReceived;
-            pmSensorDevice?.Close();
+            sensorDevice.DataReceived -= PMSensorDataReceived;
+            sensorDevice?.Close();
         }
 
         private void Output(Logger log, string s, bool endOfLine = false, bool doNotDisplayOnConsole = false)
@@ -110,7 +110,7 @@ namespace ReadPMSensor
             Output(log, String.Format("{0:00}.{1:00}.{2:0000} {3:00}:{4:00}:{5:00}\t", now.Day, now.Month, now.Year, now.Hour, now.Minute, now.Second));
         }
 
-        public void PMSensorDataReceived(object sender, PMSensorEventArgs e)
+        public void PMSensorDataReceived(object sender, NovaSDS011SensorEventArgs e)
         {
             if (e != null)
             {
