@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Threading;
 using Ecorise.Sensor.PMSensor;
 using Ecorise.Utils;
@@ -13,20 +12,15 @@ namespace ReadPMSensor
         Exit
     };
 
-    public class Program
+    public class Program : IDisposable
     {
-        NovaSDS011SensorDevice sensorDevice;
-
+        private readonly string serialInputDeviceComPort = "com3";
+        private NovaSds011SensorDevice sensorDevice;
         private Logger log = new Logger("PM");
-        private StringBuilder sbLog = new StringBuilder();
-        private StringBuilder sbConsole = new StringBuilder();
-
-        private string serialInputDeviceComPort = "com3";
 
         void Run()
         {
-            Output(log, "Date et heure\tPM2.5 [μg/m³]\tPM10 [μg/m³]");
-            Output(log, "", true);
+            log.Log("Date et heure\tPM2.5 [μg/m³]\tPM10 [μg/m³]\n");
 
             Mode mode = Mode.Init;
 
@@ -34,27 +28,26 @@ namespace ReadPMSensor
             {
                 if (mode == Mode.Running)
                 {
+                    if (!sensorDevice.IsOpen)
+                    {
+                        mode = Mode.Init;
+                    }
                 }
                 else if (mode == Mode.Init)
                 {
-                    sensorDevice = new NovaSDS011SensorDevice();
-                    sensorDevice.Open(serialInputDeviceComPort);
+                    sensorDevice = new NovaSds011SensorDevice();
 
-                    if (sensorDevice.IsOpen)
+                    if (sensorDevice.Open(serialInputDeviceComPort))
                     {
-                        Console.WriteLine($"Le port de communication {serialInputDeviceComPort} est ouvert.");
-                        Console.WriteLine("");
-
                         sensorDevice.DataReceived += PMSensorDataReceived;
-
                         mode = Mode.Running;
                     }
                     else
                     {
                         DateTime now = DateTime.UtcNow;
-                        LogDateTime(now);
-                        Output(log, String.Format($"Impossible d'ouvrir le port de communication {serialInputDeviceComPort} !"), true);
-                        Thread.Sleep(500);
+                        log.LogDateTime(now);
+                        log.Log($"\tImpossible d'ouvrir le port de communication {serialInputDeviceComPort} !\n");
+                        Thread.Sleep(900);
                     }
                 }
 
@@ -86,67 +79,51 @@ namespace ReadPMSensor
             sensorDevice?.Close();
         }
 
-        private void Output(Logger log, string s, bool endOfLine = false, bool doNotDisplayOnConsole = false)
-        {
-            sbLog.Append(s);
-
-            if (!doNotDisplayOnConsole)
-            {
-                sbConsole.Append(s);
-            }
-
-            if (endOfLine)
-            {
-                Console.WriteLine(sbConsole.ToString());
-                log.Log(sbLog.ToString());
-                sbLog.Clear();
-                sbConsole.Clear();
-            }
-        }
-
-        private void LogDateTime(DateTime utcNow)
-        {
-            DateTime now = utcNow.ToLocalTime();
-            Output(log, String.Format("{0:00}.{1:00}.{2:0000} {3:00}:{4:00}:{5:00}\t", now.Day, now.Month, now.Year, now.Hour, now.Minute, now.Second));
-        }
-
-        public void PMSensorDataReceived(object sender, NovaSDS011SensorEventArgs e)
+        public void PMSensorDataReceived(object sender, NovaSds011SensorEventArgs e)
         {
             if (e != null)
             {
-                LogDateTime(DateTime.UtcNow);
-                Output(log, string.Format("{0}\t", e.PM25));
-                Output(log, string.Format("{0}\t", e.PM10));
-                Output(log, "", true);
+                log.LogDateTime(DateTime.UtcNow);
+                log.Log("\t{0}", e.PM25);
+                log.Log("\t{0}", e.PM10);
+                log.Log("\n");
             }
         }
 
         public static void Main()
         {
-            // Added to prevent sleep mode. See http://stackoverflow.com/questions/6302185/how-to-prevent-windows-from-entering-idle-state
-            uint fPreviousExecutionState = NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS | NativeMethods.ES_SYSTEM_REQUIRED);
-
-            if (fPreviousExecutionState == 0)
+            using(new PreventSleepMode())
             {
-                Console.WriteLine("SetThreadExecutionState failed.");
-            }
-
-            try
-            {
-                new Program().Run();
-            }
-            finally
-            {
-                try
+                using (Program program = new Program())
                 {
-                    // Restore previous state
-                    NativeMethods.SetThreadExecutionState(fPreviousExecutionState);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
+                    program.Run();
                 }
             }
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    sensorDevice.Close();
+                    sensorDevice.Dispose();
+                    sensorDevice = null;
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }
