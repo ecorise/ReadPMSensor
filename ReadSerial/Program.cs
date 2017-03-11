@@ -5,22 +5,22 @@ using Ecorise.Utils;
 
 namespace ReadPMSensor
 {
-    public enum Mode
-    {
-        Init,
-        Running,
-        Exit
-    };
-
     public class Program : IDisposable
     {
+        enum Mode
+        {
+            Init,
+            Running,
+            Exit
+        };
+
         private readonly string serialInputDeviceComPort = "com3";
         private NovaSds011SensorDevice sensorDevice;
         private Logger log = new Logger("PM");
 
         void Run()
         {
-            log.Log("Date et heure\tPM2.5 [μg/m³]\tPM10 [μg/m³]\n");
+            log.Log("Date et heure\tPM2.5 [ug/m3]\tPM10 [ug/m3]\n");
 
             Mode mode = Mode.Init;
 
@@ -84,9 +84,7 @@ namespace ReadPMSensor
             if (e != null)
             {
                 log.LogDateTime(DateTime.UtcNow);
-                log.Log("\t{0}", e.PM25);
-                log.Log("\t{0}", e.PM10);
-                log.Log("\n");
+                log.Log("\t{0:0.0}\t{1:0.0}\n", e.PM25, e.PM10);
             }
         }
 
