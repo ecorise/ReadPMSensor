@@ -47,7 +47,6 @@
   <ItemGroup>
     <Compile Include="PMSensor.cs" />
     <Compile Include="Logger.cs" />
-    <Compile Include="NativeMethods.cs" />
     <Compile Include="PreventSleepMode.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

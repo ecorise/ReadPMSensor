@@ -84,6 +84,29 @@ namespace Ecorise.Sensor.PMSensor
                 try
                 {
                     count = serialPort.Read(data, 0, 20);
+
+                    if (count == 10) // Protocol specifies 10 bytes
+                    {
+                        if (data[0] == 0xAA && data[1] == 0xC0)
+                        {
+                            double pm25 = ((data[3] * 256) + data[2]) / 10.0;
+                            double pm10 = ((data[5] * 256) + data[4]) / 10.0;
+
+                            byte checksum = 0;
+                            for (int i = 2; i < 8; i++)
+                            {
+                                checksum += data[i];
+                            }
+
+                            if (checksum == data[8])
+                            {
+                                DataReceived?.Invoke(this, new NovaSds011SensorEventArgs(pm25, pm10));
+
+                                // Selon http://inovafitness.com/software/SDS011%20laser%20PM2.5%20sensor%20specification-V1.3.pdf
+                                // la précision est de +/-15% +/-10μg/m³
+                            }
+                        }
+                    }
                 }
                 catch (InvalidOperationException)
                 {
@@ -96,29 +119,6 @@ namespace Ecorise.Sensor.PMSensor
                     {
                         // Ignore "com port does not exist"
                         return;
-                    }
-                }
-
-                if (count == 10) // Protocol specifies 10 bytes
-                {
-                    if (data[0] == 0xAA && data[1] == 0xC0)
-                    {
-                        double pm25 = ((data[3] * 256) + data[2]) / 10.0;
-                        double pm10 = ((data[5] * 256) + data[4]) / 10.0;
-
-                        byte checksum = 0;
-                        for (int i = 2; i < 8; i++)
-                        {
-                            checksum += data[i];
-                        }
-
-                        if (checksum == data[8])
-                        {
-                            DataReceived?.Invoke(this, new NovaSds011SensorEventArgs(pm25, pm10));
-
-                            // Selon http://inovafitness.com/software/SDS011%20laser%20PM2.5%20sensor%20specification-V1.3.pdf
-                            // la précision est de +/-15% +/-10μg/m³
-                        }
                     }
                 }
             }
